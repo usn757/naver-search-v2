@@ -10,8 +10,6 @@ import util.config.AppConfig;
 import util.logger.MyLogger;
 
 import java.io.FileOutputStream;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.List;
 
 public class Application {
@@ -32,12 +30,9 @@ public class Application {
             filename = filename.replace(".xlsx", "_dev.xlsx");
         }
 
-        Path workspacePath = Paths.get(System.getenv("GITHUB_WORKSPACE"));
-        String filePath = workspacePath.resolve(filename).toString();
-
         try (
                 Workbook workbook = new XSSFWorkbook();
-                FileOutputStream fileOut = new FileOutputStream(filePath)) {
+                FileOutputStream fileOut = new FileOutputStream(filename)) {
             List<NaverSearchResult> results = searchAPI.searchByKeyword(searchKeyword);
             logger.info("Found " + results.size() + " results");
 
@@ -60,7 +55,6 @@ public class Application {
 
         } catch (Exception e) {
             logger.severe(e.getMessage());
-            e.printStackTrace(); // 스택 트레이스 출력
         }
 
     }

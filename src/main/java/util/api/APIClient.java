@@ -34,5 +34,5 @@ public class APIClient {
 
         logger.info("%d".formatted(response.statusCode()));
         return response.body();
-    };
+    }
 }

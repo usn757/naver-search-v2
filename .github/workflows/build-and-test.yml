@@ -8,19 +8,19 @@ on:
 
   # 수동 실행 옵션
   workflow_dispatch:
-  inputs:
-    mode:
-      description: '실행 모드'
-      required: true
-      default: 'PROD'
-      type: choice
-      options:
-        - PROD
-        - DEV
-    search_keyword:
-      description: '검색 키워드'
-      required: true
-      default: ''
+    inputs:
+      mode:
+        description: '실행 모드'
+        required: true
+        default: 'PROD'
+        type: choice
+        options:
+          - PROD
+          - DEV
+      search_keyword:
+        description: '검색 키워드'
+        required: true
+        default: ''
 
 jobs:
   build-and-run:

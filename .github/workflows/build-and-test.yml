@@ -1,4 +1,6 @@
-name: Application Scheduler
+# .github/workflows/scheduled-search.yml (수정)
+
+name: Scheduled Naver Search
 
 on:
   schedule:
@@ -24,6 +26,9 @@ jobs:
   build-and-run:
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: write  # 자동 커밋/푸시를 위해 write 권한 필요
+
     steps:
       - name: 코드 체크아웃
         uses: actions/checkout@v4
@@ -34,7 +39,7 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Maven 캐시 설정
+      - name: Maven 캐시 설정 (선택 사항)
         uses: actions/cache@v3
         with:
           path: ~/.m2/repository
@@ -42,35 +47,33 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-maven-
 
-      - name: Maven 빌드 및 종속성 다운로드
-        run: |
-          # Maven을 사용하여 프로젝트 빌드 및 종속성 다운로드
-          mvn clean compile
+      - name: Maven 빌드
+        run: mvn -B clean package --file pom.xml
 
       - name: Application 실행
         env:
-          # GitHub Secrets에서 네이버 API 인증 정보 가져오기
           NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
           NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
-          # GitHub 변수에서 MODE와 SEARCH_KEYWORD 가져오기
-          # workflow_dispatch 이벤트일 경우 입력값 사용, 아닐 경우 저장소 변수 사용
           MODE: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.mode || vars.MODE }}
           SEARCH_KEYWORD: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.search_keyword || vars.SEARCH_KEYWORD }}
+          LOG_LEVEL: ${{ secrets.LOG_LEVEL }}
         run: |
-          # Maven을 사용하여 애플리케이션 실행
-          # main 클래스를 Application으로 가정
-          mvn exec:java -Dexec.mainClass="Application"
+          mkdir -p output
+          java -jar target/naver-search-v2-1.0-SNAPSHOT.jar
+
+      - name: Artifact 업로드 (선택 사항)
+        uses: actions/upload-artifact@v4
+        with:
+          name: search-results-excel
+          path: output/*.xlsx
 
       - name: 변경사항 커밋 및 푸시
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "자동 실행 결과 업데이트: ${{ github.workflow }} at $(date +'%Y-%m-%d %H:%M:%S')"
+          file_pattern: output/*.xlsx
           commit_user_name: ${{ github.repository_owner }}
           commit_user_email: ${{ github.repository_owner }}@users.noreply.github.com
           commit_author: "${{ github.repository_owner }} <${{ github.repository_owner }}@users.noreply.github.com>"
-          # 변경된 파일만 커밋
-          add_options: '-A'
-          # 변경사항이 없으면 아무 작업도 하지 않음
           skip_dirty_check: false
-          # GitHub에서 기본 제공하는 토큰 사용
-          token: ${{ secrets.MY_PUSH_TOKEN }} # GITHUB_TOKEN 대신 PAT 사용
+          # token: ${{ secrets.MY_PUSH_TOKEN }}  # 제거! v5에서는 필요 없음

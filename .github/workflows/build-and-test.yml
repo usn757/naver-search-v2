@@ -3,11 +3,11 @@
 name: Scheduled Naver Search
 
 on:
-  workflow_dispatch:
   schedule:
     - cron: "0 0 * * 0" # 매주 일요일 자정에 실행 (UTC 기준
 
   # 수동 실행 옵션
+  workflow_dispatch:
   inputs:
     mode:
       description: '실행 모드'

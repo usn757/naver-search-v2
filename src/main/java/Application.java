@@ -23,7 +23,7 @@ public class Application {
 
         logger.info("Searching for: " + searchKeyword);
 
-        String filenameFormat = "%d_%s.xlsx";
+        String filenameFormat = "./%d_%s.xlsx";
         String filename = String.format(filenameFormat, System.currentTimeMillis(), searchKeyword);
 
         if ("DEV".equals(appConfig.getMode())) {
@@ -55,6 +55,7 @@ public class Application {
 
         } catch (Exception e) {
             logger.severe(e.getMessage());
+            e.printStackTrace(); // 스택 트레이스 출력
         }
 
     }

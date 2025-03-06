@@ -1,76 +1,48 @@
-# .github/workflows/scheduled-search.yml
-
-name: Scheduled Naver Search
+name: Weekly Naver Search Monitoring
 
 on:
+  workflow_dispatch: {}  # 수동 실행 가능
   schedule:
-    - cron: "0 0 * * 0" # 매주 일요일 자정에 실행 (UTC 기준
-
-  # 수동 실행 옵션
-  workflow_dispatch:
-    inputs:
-      mode:
-        description: '실행 모드'
-        required: true
-        default: 'PROD'
-        type: choice
-        options:
-          - PROD
-          - DEV
-      search_keyword:
-        description: '검색 키워드'
-        required: true
-        default: ''
+    - cron: "0 0 * * 0"  # 매주 일요일 자정에 실행 (UTC 기준)
 
 jobs:
   build-and-run:
     runs-on: ubuntu-latest
 
     permissions:
-      contents: write  # 저장소 내용에 대한 쓰기 권한
+      contents: write  # 저장소 내용에 대한 쓰기 권한 (자동 커밋/푸시를 위해)
 
     steps:
-      - name: 코드 체크아웃
+      - name: 저장소 파일 불러오기
         uses: actions/checkout@v4
 
-      - name: JDK 설정
+      - name: JAVA 17 세팅
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Maven 캐시 설정 (선택 사항)
-        uses: actions/cache@v3
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            ${{ runner.os }}-maven-
-
-      - name: Maven 빌드 및 종속성 다운로드
-        run: |
-            mvn clean compile # Maven을 사용하여 프로젝트 빌드 및 종속성 다운로드
+      - name: Maven 빌드 (테스트 포함)
+        run: mvn -B clean package --file pom.xml
 
       - name: Application 실행
-        env:
+        run: |
+          mkdir -p output  # output 디렉토리가 없으면 생성
+          java -jar target/naver-search-v2-1.0-SNAPSHOT.jar
+        env:  # 환경 변수 설정
           NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
           NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
-          MODE: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.mode || vars.MODE }}
-          SEARCH_KEYWORD: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.search_keyword || vars.SEARCH_KEYWORD }}
-          LOG_LEVEL: ${{ secrets.LOG_LEVEL }}
-        run: |
-          mvn exec:java -Dexec.mainClass="Application"
+          SEARCH_KEYWORD: ${{ vars.SEARCH_KEYWORD }}  # 저장소 변수 사용
+          MODE: ${{ vars.MODE }}  # 저장소 변수 사용 (필요한 경우)
+          LOG_LEVEL: ${{ secrets.LOG_LEVEL }} # 가능하면 secrets 사용
 
       - name: 변경사항 커밋 및 푸시
-        uses: stefanzweifel/git-auto-commit-action@v5
+        uses: stefanzweifel/git-auto-commit-action@v5 # EndBug/add-and-commit@v9 대신
         with:
-          commit_message: "자동 실행 결과 업데이트: ${{ github.workflow }} at $(date +'%Y-%m-%d %H:%M:%S')"
+          commit_message: "자동 모니터링 결과 업데이트: ${{ github.workflow }} at $(date +'%Y-%m-%d %H:%M:%S')"
+          file_pattern: output/*.xlsx # output 폴더 안의 변경된 .xlsx 파일만
           commit_user_name: ${{ github.repository_owner }}
           commit_user_email: ${{ github.repository_owner }}@users.noreply.github.com
           commit_author: "${{ github.repository_owner }} <${{ github.repository_owner }}@users.noreply.github.com>"
-          # 변경된 파일만 커밋
-          add_options: '-A'
-          # 변경사항이 없으면 아무 작업도 하지 않음
-          skip_dirty_check: false
-          # GitHub에서 기본 제공하는 토큰 사용
-          token: ${{ github.token }}
+          skip_dirty_check: false # 변경 사항이 없으면 커밋 안함
+          # token: ${{ secrets.GITHUB_TOKEN }} # permissions: contents: write 사용 시 필요 없음

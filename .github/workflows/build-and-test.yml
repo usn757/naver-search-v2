@@ -3,24 +3,24 @@
 name: Scheduled Naver Search
 
 on:
-  schedule:
-    # 30분마다 실행
-    - cron: '*/30 * * * *'
-  # 수동 실행 옵션
   workflow_dispatch:
-    inputs:
-      mode:
-        description: '실행 모드'
-        required: true
-        default: 'PROD'
-        type: choice
-        options:
-          - PROD
-          - DEV
-      search_keyword:
-        description: '검색 키워드'
-        required: true
-        default: ''
+  schedule:
+    - cron: "0 0 * * 0" # 매주 일요일 자정에 실행 (UTC 기준
+
+  # 수동 실행 옵션
+  inputs:
+    mode:
+      description: '실행 모드'
+      required: true
+      default: 'PROD'
+      type: choice
+      options:
+        - PROD
+        - DEV
+    search_keyword:
+      description: '검색 키워드'
+      required: true
+      default: ''
 
 jobs:
   build-and-run:
@@ -28,7 +28,6 @@ jobs:
 
     permissions:
       contents: write  # 저장소 내용에 대한 쓰기 권한
-      actions: write   # 워크플로우 자체에 대한 쓰기 권한 (secrets 생성 등, 필요 없을 수도 있음)
 
     steps:
       - name: 코드 체크아웃
@@ -48,8 +47,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-maven-
 
-      - name: Maven 빌드
-        run: mvn -B clean package --file pom.xml
+      - name: Maven 빌드 및 종속성 다운로드
+        run: |
+            mvn clean compile # Maven을 사용하여 프로젝트 빌드 및 종속성 다운로드
 
       - name: Application 실행
         env:
@@ -59,18 +59,18 @@ jobs:
           SEARCH_KEYWORD: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.search_keyword || vars.SEARCH_KEYWORD }}
           LOG_LEVEL: ${{ secrets.LOG_LEVEL }}
         run: |
-          mkdir -p output
-          java -jar target/naver-search-v2-1.0-SNAPSHOT.jar
+          mvn exec:java -Dexec.mainClass="Application"
 
       - name: 변경사항 커밋 및 푸시
         uses: stefanzweifel/git-auto-commit-action@v5
-        # env:  # GITHUB_TOKEN은 자동으로 설정되므로, env에 명시할 필요 없음
-        #   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           commit_message: "자동 실행 결과 업데이트: ${{ github.workflow }} at $(date +'%Y-%m-%d %H:%M:%S')"
-          file_pattern: output/*.xlsx
           commit_user_name: ${{ github.repository_owner }}
           commit_user_email: ${{ github.repository_owner }}@users.noreply.github.com
           commit_author: "${{ github.repository_owner }} <${{ github.repository_owner }}@users.noreply.github.com>"
+          # 변경된 파일만 커밋
+          add_options: '-A'
+          # 변경사항이 없으면 아무 작업도 하지 않음
           skip_dirty_check: false
-          # token: ${{ secrets.GITHUB_TOKEN }}  # 제거 (자동으로 GITHUB_TOKEN 사용)
+          # GitHub에서 기본 제공하는 토큰 사용
+          token: ${{ github.token }}

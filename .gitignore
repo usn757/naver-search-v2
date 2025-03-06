@@ -43,4 +43,4 @@ build/
 
 
 ###
-*_dev.xlsx
+output/ # output 폴더 추가

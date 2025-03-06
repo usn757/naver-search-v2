@@ -17,8 +17,12 @@ public class AppConfig {
             // GitHub Actions 환경에서는 환경 변수에서 값을 가져옴
             return System.getenv(name);
         } else {
+            String value = dotenv.get(name);
+            if(value == null || value.isBlank()){
+                throw new RuntimeException(name + "환경변수를 설정해주세요");
+            }
             // 로컬 환경에서는 .env 파일에서 값을 가져옴
-            return dotenv.get(name);
+            return value;
         }
     }
     public String getNaverClientId() {

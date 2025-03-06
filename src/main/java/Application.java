@@ -10,6 +10,10 @@ import util.config.AppConfig;
 import util.logger.MyLogger;
 
 import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 
 public class Application {
@@ -30,9 +34,26 @@ public class Application {
             filename = filename.replace(".xlsx", "_dev.xlsx");
         }
 
+        Path outputPath = Paths.get("output"); // output 폴더 경로
+        String filePath = outputPath.resolve(filename).toString();
+
+        // output 폴더가 없으면 생성
+        if (!Files.exists(outputPath)) {
+            try {
+                Files.createDirectories(outputPath);
+                logger.info("Created output directory: " + outputPath);
+            } catch (IOException e) {
+                logger.severe("Failed to create output directory: " + e.getMessage());
+                e.printStackTrace(); // 또는 예외 처리
+                return; // 폴더 생성 실패 시, 프로그램 종료 (또는 다른 처리)
+            }
+        }
+
+
+        logger.info("Creating Excel file: " + filePath);
         try (
                 Workbook workbook = new XSSFWorkbook();
-                FileOutputStream fileOut = new FileOutputStream(filename)) {
+                FileOutputStream fileOut = new FileOutputStream(filePath)) {
             List<NaverSearchResult> results = searchAPI.searchByKeyword(searchKeyword);
             logger.info("Found " + results.size() + " results");
 

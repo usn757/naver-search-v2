@@ -1,0 +1,29 @@
+name: Build and Test
+
+on:
+  push:
+    branches: [ "main" ] # main 브랜치에 push 될 때 실행
+  pull_request:
+    branches: [ "main" ] # main 브랜치에 pull request가 생성될 때 실행
+
+jobs:
+  build:
+    runs-on: ubuntu-latest # Ubuntu 최신 버전에서 실행
+
+    steps:
+      - uses: actions/checkout@v4 # 저장소 코드를 체크아웃
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4 # Java 17 설정
+        with:
+          java-version: '17'
+          distribution: 'temurin' # Temurin OpenJDK 사용
+      - name: Build with Maven
+        run: mvn -B package --file pom.xml  # Maven으로 프로젝트 빌드 (테스트 포함)
+      - name: Run Application  # main 클래스를 실행하는 단계
+        run: java -jar target/naver-search-v2-1.0-SNAPSHOT.jar
+        env:  # main class 실행에 필요한 환경 변수를 설정
+          NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}  # GitHub Secrets에서 값을 가져옴
+          NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
+          SEARCH_KEYWORD: ${{ secrets.SEARCH_KEYWORD }}
+          MODE: ${{ secrets.MODE }} # GitHub Secrets에서 값을 가져옴.
+          LOG_LEVEL: ${{secrets.LOG_LEVEL}}

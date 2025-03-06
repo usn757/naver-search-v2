@@ -1,11 +1,11 @@
 package service.search;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.github.cdimascio.dotenv.Dotenv;
 import model.dto.NaverSearchResponse;
 import model.dto.APIClientParam;
 import model.dto.NaverSearchResult;
 import util.api.APIClient;
+import util.config.AppConfig;
 import util.logger.MyLogger;
 
 import java.io.IOException;
@@ -18,36 +18,36 @@ public class NaverSearch {
     private final String clientSecret;
     private final MyLogger logger;
     private final APIClient apiClient;
+    private final ObjectMapper objectMapper;
+    private static final String NAVER_API_URL = "https://openapi.naver.com/v1/search/news.json?query=%s";
 
-    public NaverSearch() {
-        Dotenv dotenv = Dotenv.load();
-        clientId = dotenv.get("NAVER_CLIENT_ID");
-        clientSecret = dotenv.get("NAVER_CLIENT_SECRET");
-        if (clientId == null || clientSecret == null)
+
+    public NaverSearch(APIClient apiClient, AppConfig appConfig, MyLogger logger, ObjectMapper objectMapper) {
+        this.apiClient = apiClient;
+        this.clientId = appConfig.getNaverClientId();
+        this.clientSecret = appConfig.getNaverClientSecret();
+        this.logger = logger;
+        this.objectMapper = objectMapper;
+
+        if (clientId == null || clientSecret == null) {
             throw new RuntimeException("clientId and clientSecret are mandatory");
-
-        this.logger = new MyLogger(NaverSearch.class);
-        this.apiClient = new APIClient();
-//        logger.info(clientId);
-//        logger.info(clientSecret);
+        }
         logger.info("NaverSearchAPI initialized");
     }
 
     public List<NaverSearchResult> searchByKeyword(String keyword) throws IOException, InterruptedException {
         logger.info("searchByKeyword API start");
 
-        HashMap<String, String> body = new HashMap<>();
         APIClientParam param = new APIClientParam(
-                "https://openapi.naver.com/v1/search/news.json?query=%s".formatted(keyword),
+                String.format(NAVER_API_URL, keyword),
                 "GET",
-                body,
+                new HashMap<>(),
                 "X-Naver-Client-Id",clientId,"X-Naver-Client-Secret",clientSecret
         );
 
 
-        ObjectMapper objectmapper = new ObjectMapper();
 
-        return objectmapper.readValue(apiClient.callAPI(param), NaverSearchResponse.class).items();
+        return objectMapper.readValue(apiClient.callAPI(param), NaverSearchResponse.class).items();
     }
 
 }

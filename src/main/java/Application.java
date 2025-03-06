@@ -1,10 +1,12 @@
-import io.github.cdimascio.dotenv.Dotenv;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import model.dto.NaverSearchResult;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import service.search.NaverSearch;
+import util.api.APIClient;
+import util.config.AppConfig;
 import util.logger.MyLogger;
 
 import java.io.FileOutputStream;
@@ -12,32 +14,27 @@ import java.util.List;
 
 public class Application {
     public static void main(String[] args) {
-        Dotenv dotenv = Dotenv.load();
-        MyLogger logger = new MyLogger(Application.class);
-        String searchKeyword = dotenv.get("SEARCH_KEYWORD");
+        AppConfig appConfig = new AppConfig();
+        MyLogger logger = new MyLogger(Application.class, appConfig);
+        ObjectMapper objectMapper = new ObjectMapper();
+        APIClient apiClient = new APIClient(new MyLogger(APIClient.class, appConfig), objectMapper);
+        NaverSearch searchAPI = new NaverSearch(apiClient, appConfig, new MyLogger(NaverSearch.class, appConfig), objectMapper);
+        String searchKeyword = appConfig.getSearchKeyword();
 
-        logger.info(searchKeyword);
+        logger.info("Searching for: " + searchKeyword);
 
-        NaverSearch searchAPI = new NaverSearch();
+        String filenameFormat = "%d_%s.xlsx";
+        String filename = String.format(filenameFormat, System.currentTimeMillis(), searchKeyword);
 
-        String filenameFormat = "%d_%s";
-        String mode = dotenv.get("MODE");
-        if (mode.isBlank()) {
-            throw new RuntimeException("mode is blank");
-        }
-
-        String filename = filenameFormat.formatted(System.currentTimeMillis(), searchKeyword);
-        switch (mode) {
-            case "DEV":
-                filename += "_dev";
-                break;
+        if ("DEV".equals(appConfig.getMode())) {
+            filename = filename.replace(".xlsx", "_dev.xlsx");
         }
 
         try (
                 Workbook workbook = new XSSFWorkbook();
-                FileOutputStream fileOut = new FileOutputStream(filename + ".xlsx")) {
-            List<NaverSearchResult> result = searchAPI.searchByKeyword(searchKeyword);
-//            logger.info(result.toString());
+                FileOutputStream fileOut = new FileOutputStream(filename)) {
+            List<NaverSearchResult> results = searchAPI.searchByKeyword(searchKeyword);
+            logger.info("Found " + results.size() + " results");
 
 
             Sheet sheet = workbook.createSheet(searchKeyword);
@@ -47,7 +44,7 @@ public class Application {
             headerRow.createCell(2).setCellValue("제목");
             headerRow.createCell(3).setCellValue("설명");
             int i = 0;
-            for (NaverSearchResult item : result) {
+            for (NaverSearchResult item : results) {
                 Row row = sheet.createRow(++i);
                 row.createCell(0).setCellValue(item.pubDate());
                 row.createCell(1).setCellValue(item.link());

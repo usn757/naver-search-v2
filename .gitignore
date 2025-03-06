@@ -44,3 +44,4 @@ build/
 
 ###
 output/ # output 폴더 추가
+output/*

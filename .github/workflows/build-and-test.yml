@@ -73,4 +73,4 @@ jobs:
           # 변경사항이 없으면 아무 작업도 하지 않음
           skip_dirty_check: false
           # GitHub에서 기본 제공하는 토큰 사용
-          token: ${{ github.token }}
+          token: ${{ secrets.MY_PUSH_TOKEN }} # GITHUB_TOKEN 대신 PAT 사용

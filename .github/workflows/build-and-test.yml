@@ -27,9 +27,3 @@ jobs:
           SEARCH_KEYWORD: ${{ secrets.SEARCH_KEYWORD }}
           MODE: ${{ secrets.MODE }} # GitHub Secrets에서 값을 가져옴.
           LOG_LEVEL: ${{secrets.LOG_LEVEL}}
-
-      - name: Upload Excel file
-        uses: actions/upload-artifact@v3
-        with:
-          name: search-results-excel
-          path: ./*.xlsx  # workspace 루트의 모든 .xlsx 파일

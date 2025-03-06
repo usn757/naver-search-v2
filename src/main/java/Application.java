@@ -10,6 +10,8 @@ import util.config.AppConfig;
 import util.logger.MyLogger;
 
 import java.io.FileOutputStream;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 
 public class Application {
@@ -23,16 +25,19 @@ public class Application {
 
         logger.info("Searching for: " + searchKeyword);
 
-        String filenameFormat = "./%d_%s.xlsx";
+        String filenameFormat = "%d_%s.xlsx";
         String filename = String.format(filenameFormat, System.currentTimeMillis(), searchKeyword);
 
         if ("DEV".equals(appConfig.getMode())) {
             filename = filename.replace(".xlsx", "_dev.xlsx");
         }
 
+        Path workspacePath = Paths.get(System.getenv("GITHUB_WORKSPACE"));
+        String filePath = workspacePath.resolve(filename).toString();
+
         try (
                 Workbook workbook = new XSSFWorkbook();
-                FileOutputStream fileOut = new FileOutputStream(filename)) {
+                FileOutputStream fileOut = new FileOutputStream(filePath)) {
             List<NaverSearchResult> results = searchAPI.searchByKeyword(searchKeyword);
             logger.info("Found " + results.size() + " results");
 
